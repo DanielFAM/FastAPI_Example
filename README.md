@@ -1,8 +1,8 @@
 # Ejemplo de API con FastAPI
 
-### Se crea un API haciendo uso del framework FastAPI de python, el cuel contara con las siguientes caracteristicas
+### Se crea un API haciendo uso del framework FastAPI de python, el cual contara con las siguientes caracteristicas
 
-* Operaciones HTTP (Create, Read, Update, Delete). Sin persistencia de datos a manera de ejemplo
+* Operaciones HTTP (Create, Read, Update, Delete).
 
 * Uso de Path y Query operations
 
@@ -16,4 +16,8 @@
 
 * Las dependencias necesarias se encuentran disponibles en el archivo requirements.txt. Para su intalación correr el comando `pip install -r requirements.txt`
 
+* Se añade persistencia de datos haciendo uso de sqlite y el ORM SQLAlchemy
+
 ### Disclaimer: El proyecto entero se encuentra basado en el curso de Introducción a FastAPI: Path Operations, Validaciones y Autenticación. Disponible en: https://platzi.com/cursos/fastapi/
+
+### Curso de FastAPI: Base de Datos, Modularización y Deploy a Producción. Disponible en: https://platzi.com/cursos/fastapi-modularizacion-datos/
