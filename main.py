@@ -4,11 +4,18 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
+from config.database import session, engine, base
+from models.movie import Movie as MovieModel
+from fastapi.encoders import jsonable_encoder
+
+
 #documentado con Swagger
 
 app = FastAPI()
 app.title = "My app with FastAPI"
 app.version = "0.0.1"
+
+base.metadata.create_all(bind=engine)
 
 class JWTBearer(HTTPBearer):
     async def __call__(self, request: Request) :
@@ -75,47 +82,82 @@ def login(user: User):
 
 @app.get('/movies',tags=['movies'], response_model=List[Movie], status_code=200, dependencies=[Depends(JWTBearer())])
 def get_movies() -> List[Movie]:
-    return JSONResponse(status_code=200, content=movies)
+    db = session()
+
+    result = db.query(MovieModel).all()
+
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))
 
 
 #Path parameters
 @app.get('/movies/{id}',tags=['movies'], response_model=Movie, status_code=200)
 def get_movie(id: int = Path(ge=1, le=2000)) -> Movie: #validate path parameters with Path
-    for item in movies:
-        if item["id"] == id:
-            return JSONResponse(status_code=200, content=item)
-    return JSONResponse(status_code=404, content=[])
+    
+    db = session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    
+    if not result:
+        return JSONResponse(status_code=404, content={'message':'not found'})
+
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))
 
 #query parameters
 @app.get('/movies/', tags={'movies'}, response_model=List[Movie])
 def get_movies_by_category(category: str = Query(min_length=5, max_length=15)) -> List[Movie]:
 
-    data = [item for item in movies if item['category'] == category]
+    db = session()
 
-    return JSONResponse(content=data)
+    result = db.query(MovieModel).filter(MovieModel.category == category).all()  
+
+    if not result:
+        return JSONResponse(status_code=404, content={'message':'not found'})
+
+
+    return JSONResponse(content=jsonable_encoder(result))
 
 
 @app.post('/movies', tags={'movies'}, response_model=dict, status_code=201)
 def create_movie(movie: Movie) -> dict:
-    movies.append(movie)
+
+    db = session()
+    new_movie = MovieModel(**movie.dict())
+    db.add(new_movie)
+    db.commit()
+
     return JSONResponse(status_code=201, content={"message":"movie succesfully created"})
 
 
 @app.put('/movies/{id}', tags={'movies'}, response_model=dict, status_code=200)
 def update_movie(id: int, movie: Movie) -> dict:
-    for item in movies:
-        if item["id"] == id:
-            item["title"] = movie.title
-            item["overview"] = movie.overview
-            item["year"] = movie.year
-            item["rating"] = movie.rating
-            item["category"] = movie.category
-            return JSONResponse(status_code=200, content={"message":"movie succesfully updated"})
+
+    db = session()
+
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+
+    if not result:
+        return JSONResponse(status_code=404, content={'message':'not found'})
+
+    result.title = movie.title
+    result.overview = movie.overview
+    result.year = movie.year
+    result.rating = movie.rating
+    result.category = movie.category
+
+    db.commit()
+
+    return JSONResponse(status_code=200, content={"message":"movie succesfully updated"})
 
 
 @app.delete('/movies/{id}',tags={'movies'},response_model=dict, status_code=200)
 def delete_movie(id: int ) -> dict:
-    for item in movies:
-        if item["id"] == id:
-            movies.remove(item)
-            return JSONResponse(status_code=200, content={"message":"movie succesfully deleted"})
+    db = session()
+
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+
+    if not result:
+        return JSONResponse(status_code=404, content={'message':'not found'})
+    
+    db.delete(result)
+    db.commit()
+
+    return JSONResponse(status_code=200, content={"message":"movie succesfully deleted"})
